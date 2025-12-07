@@ -9,7 +9,7 @@ import Debug.Trace (trace)
 
 main = do
   file <- readFile "input.txt"
-  let tachyonManifolds = fileToManifold file
+  let tachyonManifolds = fileToManifolds file
   print $ length $ getSplits tachyonManifolds
 
 type TachyonManifolds = Seq.Seq (Int, Seq.Seq Char)
@@ -22,8 +22,8 @@ initCache :: Cache
 initCache = Map.empty
 
 -- NOTE: zip zips endlessly for one infinite sequence, despite that working for lists
-fileToManifold :: String -> TachyonManifolds
-fileToManifold file = Seq.zip (Seq.fromList [0 .. len - 1]) fileLines
+fileToManifolds :: String -> TachyonManifolds
+fileToManifolds file = Seq.zip (Seq.fromList [0 .. len - 1]) fileLines
  where
   len = length fileLines
   fileLines = Seq.fromList $ map Seq.fromList fileLinesList
@@ -38,22 +38,16 @@ getSplits manifolds = fst $ getSplits' (Seq.drop 1 manifolds) (1, startIdx) init
 getSplits' :: TachyonManifolds -> Coord -> Cache -> (Set.Set Coord, Cache)
 getSplits' Seq.Empty _ cache = (Set.empty, cache)
 getSplits' manifolds coord@(_, beamSourceCol) cache
+  | Map.member coord cache = (fromJust (Map.lookup coord cache), cache) -- cache hit
   | reachedEnd = (Set.empty, cache)
-  | otherwise = (mergedSplits, Map.insert coord mergedSplits cache)
+  | otherwise = (mergedSplits, newCache) -- cache miss
  where
-  mergedSplits = insertSplitter $ leftSubTreeSplits `Set.union` rightSubTreeSplits
+  newCache = Map.insert coord mergedSplits rightCache
+  mergedSplits = Set.insert (rowIdx, beamSourceCol) $ leftSubTreeSplits `Set.union` rightSubTreeSplits
+  (rightSubTreeSplits, rightCache) = getSplits' manifoldRest rightSource leftCache
+  (leftSubTreeSplits, leftCache) = getSplits' manifoldRest leftSource cache
 
-  rightSubTreeSplits
-    | Map.member rightSource cache = fromJust $ Map.lookup rightSource cache -- no need to recompute
-    | otherwise = fst $ getSplits' manifoldRest rightSource cache
-
-  leftSubTreeSplits
-    | Map.member leftSource cache = fromJust $ Map.lookup leftSource cache -- no need to recompute
-    | otherwise = fst $ getSplits' manifoldRest leftSource cache
-
-  insertSplitter = Set.insert (rowIdx, beamSourceCol)
   (leftSource, rightSource) = ((nextRowIdx, beamSourceCol - 1), (nextRowIdx, beamSourceCol + 1))
-
   nextRowIdx = rowIdx + 1
   (rowIdx, _) = manifoldDropped `Seq.index` 0
 
