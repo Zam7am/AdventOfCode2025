@@ -1,11 +1,9 @@
-import Data.Either (lefts)
 import Data.List
 import Data.Map qualified as Map
 import Data.Maybe (fromJust)
 import Data.Sequence (Seq ((:<|)))
 import Data.Sequence qualified as Seq
 import Data.Set qualified as Set
-import Debug.Trace (trace)
 
 main = do
   file <- readFile "input.txt"
