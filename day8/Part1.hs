@@ -5,9 +5,6 @@ import Data.Maybe (fromJust)
 import Data.Ord qualified as Ord
 import Data.Sequence qualified as Seq
 import Data.Set qualified as Set
-import Data.Text qualified as Text
-import Data.Text.Read
-import Debug.Trace (trace)
 
 main = do
   file <- readFile "input.txt"
@@ -15,7 +12,6 @@ main = do
   let edges = possibleEdges junctionBoxes
   let pairs = take 1000 $ shortestEdges edges
   let circuits = makeCircuits pairs
-  print circuits
   print $ multLargestCircuits circuits
 
 multLargestCircuits :: Set.Set Circuit -> Int
@@ -41,14 +37,12 @@ updateCircuit mapper circuit circuits = mergeOverlapping updated
   updated = Set.insert (mapper circuit) $ Set.delete circuit circuits
 
 mergeOverlapping :: Set.Set Circuit -> Set.Set Circuit
-mergeOverlapping circuits
-  | any (\c -> any (c `overlaps`) circuits) circuits = Set.delete circuit newSet
-  | otherwise = newSet
+mergeOverlapping circuits = merged `Set.union` removedMerged
  where
-  newSet = Set.insert merged cleanedSet
-  cleanedSet = foldr Set.delete circuits overlapping
-  merged = Set.foldr Set.union Set.empty overlapping
-  overlapping = Set.filter (`overlaps` circuit) circuits
+  merged = Set.fromList $ map (foldr Set.union Set.empty) pairs
+  removedMerged = circuits `Set.difference` Set.fromList (concat pairs)
+  pairs = [[c1, c2] | c1 <- cs, c2 <- cs, c1 /= c2, c1 `overlaps` c2] -- merges only two together, however that is enough
+  cs = Set.elems circuits
 
 shortestEdges :: Edges -> [Edge]
 shortestEdges (Edges edges)
